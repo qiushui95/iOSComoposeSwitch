@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -106,12 +107,24 @@ private fun IOSSwitch(
         if (checked) checkedTrackColor else normalTrackColor
     }
 
+    val clickModifier = remember(onClick) {
+        if (onClick == null) {
+            Modifier
+        } else {
+            Modifier.clickable(
+                interactionSource = MutableInteractionSource(),
+                onClick = onClick,
+                indication = null,
+            )
+        }
+    }
+
     Box(
         modifier = Modifier
             .width(width)
             .height(trackHeight)
             .clip(CircleShape)
-            .clickable(onClick = { onClick?.invoke() }, enabled = onClick != null),
+            .then(clickModifier),
         contentAlignment = Alignment.CenterStart,
     ) {
         val thumbPaddingStartState = animateDpAsState(
