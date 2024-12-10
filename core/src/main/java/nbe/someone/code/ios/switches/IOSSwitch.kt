@@ -16,96 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 
 @Composable
-public fun IOSSwitch(
-    checkedState: State<Boolean>,
-    onClick: (() -> Unit)?,
-    config: IOSSwitchConfig? = null,
-) {
-    val globalConfig = LocalIOSSwitchConfig.current
-
-    val combineConfig = globalConfig.combine(config)
-
-    val checkedThumbColorRes = combineConfig.checkedThumbColorRes
-        ?: throw IOSSwitchException("checkedThumbColorRes")
-    val checkedThumbColor = colorResource(checkedThumbColorRes)
-
-    val checkedTrackColorRes = combineConfig.checkedTrackColorRes
-        ?: throw IOSSwitchException("checkedTrackColorRes")
-    val checkedTrackColor = colorResource(checkedTrackColorRes)
-
-    val normalThumbColorRes = combineConfig.normalThumbColorRes
-        ?: throw IOSSwitchException("normalThumbColorRes")
-    val normalThumbColor = colorResource(normalThumbColorRes)
-
-    val normalTrackColorRes = combineConfig.normalTrackColorRes
-        ?: throw IOSSwitchException("normalTrackColorRes")
-    val normalTrackColor = colorResource(normalTrackColorRes)
-
-    val width = combineConfig.width ?: throw IOSSwitchException("width")
-    val trackHeight = combineConfig.trackHeight ?: throw IOSSwitchException("trackHeight")
-    val trackPadding = combineConfig.trackPadding ?: throw IOSSwitchException("trackPadding")
-
-    IOSSwitch(
-        checkedState = checkedState,
-        onClick = onClick,
-        checkedThumbColor = checkedThumbColor,
-        checkedTrackColor = checkedTrackColor,
-        normalThumbColor = normalThumbColor,
-        normalTrackColor = normalTrackColor,
-        width = width,
-        trackPadding = trackPadding,
-        trackHeight = trackHeight,
-    )
-}
-
-@Composable
-private fun IOSSwitch(
-    checkedState: State<Boolean>,
-    onClick: (() -> Unit)?,
-    checkedThumbColor: Color,
-    checkedTrackColor: Color,
-    normalThumbColor: Color,
-    normalTrackColor: Color,
-    width: Dp,
-    trackHeight: Dp,
-    trackPadding: Dp,
-) {
-    val checked = checkedState.value
-
-    if (trackHeight <= trackPadding * 2) {
-        throw IllegalArgumentException("Track height must be greater than twice the track padding.")
-    }
-
-    val thumbSize = trackHeight - trackPadding * 2
-
-    if (width <= trackHeight) {
-        throw IllegalArgumentException("Width must be greater than track height.")
-    }
-
-    val thumbPaddingStart = remember(checked) {
-        if (checkedState.value) {
-            width - trackPadding - thumbSize
-        } else {
-            trackPadding
-        }
-    }
-
-    val thumbColor = remember(checked) {
-        if (checked) checkedThumbColor else normalThumbColor
-    }
-
-    val trackColor = remember(checked) {
-        if (checked) checkedTrackColor else normalTrackColor
-    }
+public fun IOSSwitch(checkedState: State<Boolean>, onClick: (() -> Unit)?) {
+    val config = LocalIOSSwitchConfig.current
 
     val clickModifier = remember(onClick) {
         if (onClick == null) {
@@ -121,42 +43,84 @@ private fun IOSSwitch(
 
     Box(
         modifier = Modifier
-            .width(width)
-            .height(trackHeight)
+            .width(config.width)
+            .height(config.trackHeight)
             .clip(CircleShape)
             .then(clickModifier),
         contentAlignment = Alignment.CenterStart,
     ) {
-        val thumbPaddingStartState = animateDpAsState(
-            targetValue = thumbPaddingStart,
-            animationSpec = tween(),
-            label = "ThumbPadding",
-        )
-
-        val thumbColorState = animateColorAsState(
-            targetValue = thumbColor,
-            animationSpec = tween(),
-            label = "ThumbColor",
-        )
-
-        val trackColorState = animateColorAsState(
-            targetValue = trackColor,
-            animationSpec = tween(),
-            label = "TrackColor",
-        )
-
-        Spacer(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(trackColorState.value),
-        )
-
-        Spacer(
-            modifier = Modifier
-                .offset(x = thumbPaddingStartState.value)
-                .size(thumbSize)
-                .clip(CircleShape)
-                .background(thumbColorState.value),
-        )
+        CPTrack(checkedState)
+        CPThumb(checkedState)
     }
+}
+
+private fun getTrackColor(checkedState: State<Boolean>, colors: IOSSwitchColors): Color {
+    return if (checkedState.value) colors.checkedTrackColor else colors.normalTrackColor
+}
+
+@Composable
+private fun CPTrack(checkedState: State<Boolean>) {
+    val colors = LocalIOSSwitchColors.current
+
+    val targetColorState = remember(checkedState) {
+        derivedStateOf { getTrackColor(checkedState, colors) }
+    }
+
+    val trackColorState = animateColorAsState(
+        targetValue = targetColorState.value,
+        animationSpec = tween(),
+        label = "TrackColor",
+    )
+
+    Spacer(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(trackColorState.value),
+    )
+}
+
+private fun getThumbPaddingStart(checkedState: State<Boolean>, config: IOSSwitchConfig): Dp {
+    return if (checkedState.value) {
+        config.width - config.trackPadding - config.thumbSize
+    } else {
+        config.trackPadding
+    }
+}
+
+private fun getThumbColor(checkedState: State<Boolean>, colors: IOSSwitchColors): Color {
+    return if (checkedState.value) colors.checkedThumbColor else colors.normalThumbColor
+}
+
+@Composable
+private fun CPThumb(checkedState: State<Boolean>) {
+    val colors = LocalIOSSwitchColors.current
+    val config = LocalIOSSwitchConfig.current
+
+    val targetPaddingStartState = remember(checkedState, config) {
+        derivedStateOf { getThumbPaddingStart(checkedState, config) }
+    }
+
+    val targetThumbColorState = remember(checkedState, colors) {
+        derivedStateOf { getThumbColor(checkedState, colors) }
+    }
+
+    val thumbPaddingStartState = animateDpAsState(
+        targetValue = targetPaddingStartState.value,
+        animationSpec = tween(),
+        label = "ThumbPadding",
+    )
+
+    val thumbColorState = animateColorAsState(
+        targetValue = targetThumbColorState.value,
+        animationSpec = tween(),
+        label = "ThumbColor",
+    )
+
+    Spacer(
+        modifier = Modifier
+            .offset { IntOffset(thumbPaddingStartState.value.roundToPx(), 0) }
+            .size(config.thumbSize)
+            .clip(CircleShape)
+            .background(thumbColorState.value),
+    )
 }

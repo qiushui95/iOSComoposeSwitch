@@ -13,9 +13,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import nbe.someone.code.ios.switches.IOSSwitch
+import nbe.someone.code.ios.switches.IOSSwitchColors
 import nbe.someone.code.ios.switches.IOSSwitchConfig
+import nbe.someone.code.ios.switches.LocalIOSSwitchColors
 import nbe.someone.code.ios.switches.LocalIOSSwitchConfig
 
 class MainActivity : ComponentActivity() {
@@ -27,15 +31,30 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun defaultConfig(): IOSSwitchConfig {
+private fun defaultConfig(
+    width: Dp = 60.dp,
+    trackHeight: Dp = 30.dp,
+    trackPadding: Dp = 2.dp,
+): IOSSwitchConfig {
     return IOSSwitchConfig(
-        width = 60.dp,
-        trackHeight = 30.dp,
-        trackPadding = 2.dp,
-        checkedThumbColorRes = R.color.colorSwitchThumb,
-        checkedTrackColorRes = R.color.colorSwitchTrackChecked,
-        normalThumbColorRes = R.color.colorSwitchThumb,
-        normalTrackColorRes = R.color.colorSwitchTrackNormal,
+        width = width,
+        trackHeight = trackHeight,
+        trackPadding = trackPadding,
+    )
+}
+
+@Composable
+private fun defaultColor(
+    checkedThumbColor: Color = Color(0xFFFFFFFF),
+    checkedTrackColor: Color = Color(0xFF248A3E),
+    normalThumbColor: Color = Color(0xFF197AD7),
+    normalTrackColor: Color = Color(0xFF95969B),
+): IOSSwitchColors {
+    return IOSSwitchColors(
+        checkedThumbColor = checkedThumbColor,
+        checkedTrackColor = checkedTrackColor,
+        normalThumbColor = normalThumbColor,
+        normalTrackColor = normalTrackColor,
     )
 }
 
@@ -49,7 +68,10 @@ private fun CPMainPage() {
         { isCheckedState.value = isCheckedState.value.not() }
     }
 
-    CompositionLocalProvider(LocalIOSSwitchConfig provides defaultConfig()) {
+    CompositionLocalProvider(
+        LocalIOSSwitchConfig provides defaultConfig(),
+        LocalIOSSwitchColors provides defaultColor(),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -58,26 +80,22 @@ private fun CPMainPage() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             IOSSwitch(checkedState = isCheckedState, onClick = onClick)
-            IOSSwitch(
-                checkedState = isCheckedState,
-                onClick = onClick,
-                IOSSwitchConfig.remember(checkedTrackColorRes = R.color.purple_700),
-            )
-            IOSSwitch(
-                checkedState = isCheckedState,
-                onClick = onClick,
-                IOSSwitchConfig.remember(trackHeight = 40.dp),
-            )
-            IOSSwitch(
-                checkedState = isCheckedState,
-                onClick = onClick,
-                IOSSwitchConfig.remember(trackPadding = 3.dp),
-            )
-            IOSSwitch(
-                checkedState = isCheckedState,
-                onClick = onClick,
-                IOSSwitchConfig.remember(checkedThumbColorRes = R.color.purple_200),
-            )
+
+            CompositionLocalProvider(
+                LocalIOSSwitchColors provides defaultColor(checkedTrackColor = Color(0xFF3700B3)),
+            ) { IOSSwitch(checkedState = isCheckedState, onClick = onClick) }
+
+            CompositionLocalProvider(
+                LocalIOSSwitchConfig provides defaultConfig(trackHeight = 40.dp),
+            ) { IOSSwitch(checkedState = isCheckedState, onClick = onClick) }
+
+            CompositionLocalProvider(
+                LocalIOSSwitchConfig provides defaultConfig(trackPadding = 3.dp),
+            ) { IOSSwitch(checkedState = isCheckedState, onClick = onClick) }
+
+            CompositionLocalProvider(
+                LocalIOSSwitchColors provides defaultColor(checkedTrackColor = Color(0xFFBB86FC)),
+            ) { IOSSwitch(checkedState = isCheckedState, onClick = onClick) }
         }
     }
 }
